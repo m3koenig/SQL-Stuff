@@ -1,0 +1,66 @@
+USE [coolitR2Dev]
+GO
+/****** Object:  Trigger [dbo].[Lock_Object_Update]    Script Date: 28.04.2015 14:50:06 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:		Böttcher, Leonhard
+-- Create date: 120215
+-- Description:	anaptis GmbH
+-- =============================================
+ALTER TRIGGER [dbo].[Lock_Object_Update] 
+   ON  [dbo].[Object] 
+   AFTER UPDATE
+AS 
+BEGIN
+	SET NOCOUNT ON;
+	IF UPDATE(Locked) OR  UPDATE([Date]) OR UPDATE([Time])
+		BEGIN			
+			INSERT INTO [dbo].[aPMTaskHistory]
+				  ([Type]
+				  ,[Company Name]
+				  ,[ID]
+				  ,[Name]
+				  ,[Compiled]
+				  ,[Date]
+				  ,[Version List]
+				  ,[Version List Old]
+				  ,[Locked]
+				  ,[Locked By]
+				  ,[Changed By]
+				  ,[ChangedDateOld]
+				  ,[ChangedTimeOld]
+				  ,[LockInfo])
+			SELECT
+				INSED.Type
+			   ,DELED.[Company Name]
+			   ,INSED.ID
+			   ,INSED.Name
+			   ,INSED.Compiled
+			   ,GETDATE()
+			   ,INSED.[Version List]
+			   ,DELED.[Version List]
+			   ,INSED.[Locked]
+			   ,CASE INSED.[Locked]
+					WHEN 1 THEN INSED.[Locked By]
+					WHEN 0 THEN DELED.[Locked By]
+				END
+			   ,SUSER_SNAME()
+			   ,DELED.[Date]
+			   ,DELED.[Time]
+			   ,CASE  INSED.[Locked]
+					WHEN 1 THEN 'Lock'
+					WHEN 0 THEN CASE DELED.[Locked By]
+						WHEN SUSER_SNAME() THEN 'Unlock'
+						ELSE 'Forced Unlock'
+					END
+				END   
+			FROM [dbo].[Object] AS LOCKDEV
+			INNER JOIN inserted AS INSED
+				ON INSED.[Type] = LOCKDEV.[Type] AND INSED.[Company Name] = LOCKDEV.[Company Name] AND INSED.ID = LOCKDEV.ID
+			INNER JOIN deleted AS DELED
+				ON DELED.[Type] = LOCKDEV.[Type] AND DELED.[Company Name] = LOCKDEV.[Company Name] AND DELED.ID = LOCKDEV.ID;		
+	END 
+END

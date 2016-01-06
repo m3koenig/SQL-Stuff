@@ -1,6 +1,7 @@
+-- NAV 2009
 delete from [dbo].[User] 
 delete from [dbo].[Windows Access Control] 
--- delete from [dbo].[Access Control] 
+delete from [dbo].[Windows Access Control] 
 delete from [dbo].[Windows Login] 
 
 delete from [dbo].[Page Data Personalization] 
